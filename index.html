@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Madrasa Campaign Frame Maker</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css" />
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 320px; 
+            height: 400px; /* പോസ്റ്ററിന്റെ ഹൈറ്റ് അനുസരിച്ച് മാറ്റാം */
+            margin: 0 auto 20px;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            background-color: white;
+        }
+
+        #cropper-1 {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #frame-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            object-fit: fill;
+        }
+
+        /* പേര് വരാനുള്ള സ്റ്റൈൽ */
+        #user-name-display {
+            position: absolute;
+            bottom: 35px; /* മഞ്ഞ ബോക്സിന് അനുസരിച്ച് ഇത് അഡ്ജസ്റ്റ് ചെയ്യാം */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            z-index: 20;
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+
+        .controls { margin-top: 15px; }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            border: none;
+        }
+
+        .btn-upload { background-color: #e8f0fe; color: #1a73e8; }
+        .btn-download { background-color: #28a745; color: white; }
+        .btn-download:disabled { background-color: #ccc; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h3>ക്യാമ്പയിൻ ഫോട്ടോ സെറ്റ് ചെയ്യാം</h3>
+        
+        <div class="canvas-container" id="capture-area">
+            <div id="user-name-display"></div>
+            
+            <img id="frame-overlay" src="frame.png" crossorigin="anonymous" alt="Frame">
+            <div id="cropper-1"></div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="name-input" class="input-field" placeholder="നിങ്ങളുടെ പേര് ടൈപ്പ് ചെയ്യുക" maxlength="25">
+            
+            <label for="upload-photo" class="btn btn-upload">ഫോട്ടോ തിരഞ്ഞെടുക്കുക</label>
+            <input type="file" id="upload-photo" style="display:none;" accept="image/*">
+            
+            <button id="download-btn" class="btn btn-download" disabled>സേവ് ചെയ്യുക</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        const nameInput = document.getElementById('name-input');
+        const nameDisplay = document.getElementById('user-name-display');
+        const uploadInput = document.getElementById('upload-photo');
+        const downloadBtn = document.getElementById('download-btn');
+        const cropperElement = document.getElementById('cropper-1');
+        let croppieInstance = null;
+
+        // പേര് ടൈപ്പ് ചെയ്യുമ്പോൾ അപ്പപ്പോൾ കാണിക്കാൻ
+        nameInput.addEventListener('input', function() {
+            nameDisplay.innerText = this.value;
+        });
+
+        function initCroppie() {
+            croppieInstance = new Croppie(cropperElement, {
+                viewport: { width: 180, height: 180, type: 'circle' },
+                boundary: { width: 320, height: 400 },
+                showZoomer: false,
+                mouseWheelZoom: true
+            });
+        }
+
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    if (!croppieInstance) initCroppie();
+                    croppieInstance.bind({ url: event.target.result }).then(() => {
+                        downloadBtn.disabled = false;
+                    });
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        downloadBtn.addEventListener('click', function() {
+            const area = document.getElementById('capture-area');
+            downloadBtn.innerText = "പ്രോസസ്സ് ചെയ്യുന്നു...";
+            
+            html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'campaign.png';
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                downloadBtn.innerText = "സേവ് ചെയ്യുക";
+            });
+        });
+    </script>
+</body>
+</html>
